@@ -22,10 +22,19 @@ export class LogregService {
 
   login(login:FormGroup):Observable<boolean>{
 
+    const pkey:string = this.crypto.getRandomString(16);
+    const iv:string = this.crypto.getRandomString(16);
+    const values = pkey + '.'+iv;
+
+    const {eou,password} = login.getRawValue();
+    const data:string = this.crypto.encryptJson({eou:eou,password:password},pkey,iv);
+    const s:string = this.crypto.encryptSecret(values);
+    const signature:string = this.crypto.signEncrypted(data);
     const loginData = new FormData();
 
-    loginData.append('eou',this.crypto.encryptData(login.get('eou')?.value));
-    loginData.append('password',this.crypto.encryptData(login.get('password')?.value));
+    loginData.append('data',data);
+    loginData.append('s',s);
+    loginData.append('sign',signature);
 
     return this.httpClient.post<User>(environment.url_login,loginData,{observe:'response'}).pipe(map(response=>{
       if(response.status === 200){
@@ -42,13 +51,21 @@ export class LogregService {
 
   register(register:FormGroup):Observable<object>{
 
+    const pkey:string = this.crypto.getRandomString(16);
+    const iv:string = this.crypto.getRandomString(16);
+    const values = pkey + '.'+iv;
+
+    const {name,username,user_image,email,password} = register.getRawValue();
+    const data:string = this.crypto.encryptJson({name:name,username:username,user_image:user_image,email:email,password:password},pkey,iv);
+    const s:string = this.crypto.encryptSecret(values);
+    const signature:string = this.crypto.signEncrypted(data);
+
     const registerData = new FormData();
 
-    registerData.append('name',this.crypto.encryptData(register.get('name')?.value));
-    registerData.append('username',this.crypto.encryptData(register.get('username')?.value));
-    registerData.append('user_image',this.crypto.encryptData(register.get('user_image')?.value));
-    registerData.append('email',this.crypto.encryptData(register.get('email')?.value));
-    registerData.append('password',this.crypto.encryptData(register.get('password')?.value));
+    registerData.append('data',data);
+    registerData.append('s',s);
+    registerData.append('sign',signature);
+
 
     return this.httpClient.post(environment.url_register,registerData,{observe:'body'}).pipe(catchError(this.handleError<any>('register')));
 
